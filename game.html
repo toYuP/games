@@ -88,6 +88,7 @@
   <select id="roulette-list-select"></select>
   <button onclick="createRoulette()">ルーレット作成</button>
   <button onclick="spinRoulette()">回す</button>
+  <button onclick="resetRoulette()">リセット</button>
   <div id="roulette-result" style="margin-top:20px; font-size:1.5em; font-weight:bold;"></div>
 </div>
 
@@ -232,6 +233,49 @@ function spinRoulette() {
   li.textContent = selected;
   ul.appendChild(li);
 }
+  function resetRoulette() {
+  const listName = document.getElementById("roulette-list-select").value;
+  if (!listName) return;
+
+  if (!usedSongs[listName] || usedSongs[listName].length === 0) {
+    alert("まだリセットする必要はありません");
+    return;
+  }
+
+  if (confirm("このリストのルーレット履歴をリセットしますか？")) {
+    usedSongs[listName] = [];
+    rouletteSongs = [];
+    document.getElementById("roulette-result").textContent = "";
+    alert("リセットしました");
+  }
+}
+function createRoulette() {
+  const select = document.getElementById("roulette-list-select");
+  const name = select.value;
+  if(!name) return alert("リストを選択してください");
+
+  const remaining = lists[name].filter(
+    s => !usedSongs[name].includes(s)
+  );
+
+  if (remaining.length === 0) {
+    const reset = confirm(
+      "このリストの曲はすべて使い切りました。\nリセットしてもう一度回しますか？"
+    );
+    if (reset) {
+      usedSongs[name] = [];
+      rouletteSongs = [...lists[name]];
+    } else {
+      rouletteSongs = [];
+      return;
+    }
+  } else {
+    rouletteSongs = remaining;
+  }
+
+  document.getElementById("roulette-result").textContent = "";
+}
+
 
 /* ----------------- ソリティア簡易 ----------------- */
 function shuffleSolitaire() {
