@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ミニゲームランチャー</title>
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 0;
+    padding-bottom: 80px; /* 底部広告の余白 */
+    background-size: cover;
+    background-position: center;
+    background-color: #f0f0f0;
+  }
+
+  h2, h3 { margin-top: 20px; }
+
+  button { margin: 5px; padding: 5px 10px; cursor: pointer; }
+
+  #ad-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: #f0f0f0;
+    text-align: center;
+    line-height: 60px;
+    border-top: 1px solid #ccc;
+    z-index: 1000;
+  }
+
+  #mini-panel {
+    position: fixed;
+    bottom: 80px;
+    right: 10px;
+    width: 200px;
+    height: 150px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    padding: 5px;
+    z-index: 1000;
+    overflow: auto;
+  }
+
+  .screen { display: none; padding: 10px; }
+  .active { display: block; }
+
+  #song-list div { margin-bottom: 3px; }
+</style>
+</head>
+<body>
+
+<!-- 背景画像選択 -->
+<div style="position:fixed; top:10px; right:10px; background:#fff; padding:5px; border:1px solid #ccc; z-index:1000;">
+  <input type="file" id="bg-upload" accept="image/*">
+  <button onclick="changeBackground()">背景変更</button>
+</div>
+
+<!-- トップ画面 -->
+<div id="title-screen" class="screen active">
+  <h2>ミニゲームランチャー</h2>
+  <button onclick="showApp('roulette')">ルーレット！</button>
+  <button onclick="showApp('solitaire')">ソリティア</button>
+</div>
+
+<!-- ルーレット画面 -->
+<div id="roulette-screen" class="screen">
+  <button onclick="showApp('title')">戻る</button>
+
+  <h3>曲リスト管理</h3>
+  <div>
+    <input type="text" id="new-list-name" placeholder="新しいリスト名">
+    <button onclick="createList()">新しいリスト作成</button>
+  </div>
+  <div id="lists-buttons"></div>
+
+  <div id="song-editor" style="display:none;">
+    <h4 id="current-list-title"></h4>
+    <input type="text" id="new-song-name" placeholder="曲名を入力">
+    <button onclick="addSong()">曲を追加</button>
+    <div id="song-list"></div>
+  </div>
+
+  <h3>ルーレット</h3>
+  <select id="roulette-list-select"></select>
+  <button onclick="createRoulette()">ルーレット作成</button>
+  <button onclick="spinRoulette()">回す</button>
+  <div id="roulette-result" style="margin-top:20px; font-size:1.5em; font-weight:bold;"></div>
+</div>
+
+<!-- ソリティア画面（簡易サンプル） -->
+<div id="solitaire-screen" class="screen">
+  <button onclick="showApp('title')">戻る</button>
+  <h3>簡易ソリティア</h3>
+  <button onclick="shuffleSolitaire()">シャッフル</button>
+  <div id="solitaire-board" style="margin-top:10px;"></div>
+</div>
+
+<!-- 右下ミニパネル -->
+<div id="mini-panel">
+  <h4>ミニパネル</h4>
+  <p>選ばれた曲一覧:</p>
+  <ul id="mini-songs"></ul>
+</div>
+
+<!-- 下部広告 -->
+<div id="ad-footer">
+  広告スペース
+</div>
+
+<script>
+/* ----------------- 背景変更 ----------------- */
+function changeBackground() {
+  const file = document.getElementById('bg-upload').files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      document.body.style.backgroundImage = `url(${e.target.result})`;
+    }
+    reader.readAsDataURL(file);
+  }
+}
+
+/* ----------------- 画面切替 ----------------- */
+function showApp(app){
+  const screens = document.querySelectorAll('.screen');
+  screens.forEach(s=>s.classList.remove('active'));
+
+  if(app==='title') document.getElementById('title-screen').classList.add('active');
+  else if(app==='roulette') document.getElementById('roulette-screen').classList.add('active');
+  else if(app==='solitaire') document.getElementById('solitaire-screen').classList.add('active');
+}
+
+/* ----------------- ルーレット ----------------- */
+let lists = {};
+let usedSongs = {};
+let currentList = "";
+let rouletteSongs = [];
+
+function createList() {
+  const name = document.getElementById("new-list-name").value.trim();
+  if(!name) return alert("リスト名を入力してください");
+  if(lists[name]) return alert("同名のリストがあります");
+
+  lists[name] = [];
+  usedSongs[name] = [];
+  updateListsUI();
+  document.getElementById("new-list-name").value = "";
+}
+
+function updateListsUI() {
+  const container = document.getElementById("lists-buttons");
+  container.innerHTML = "";
+  const select = document.getElementById("roulette-list-select");
+  select.innerHTML = "";
+
+  for(const name in lists){
+    const btn = document.createElement("button");
+    btn.textContent = name;
+    btn.onclick = ()=>editList(name);
+    container.appendChild(btn);
+
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+  }
+}
+
+function editList(name) {
+  currentList = name;
+  document.getElementById("song-editor").style.display = "block";
+  document.getElementById("current-list-title").textContent = `リスト: ${name}`;
+  updateSongListUI();
+}
+
+function addSong() {
+  const song = document.getElementById("new-song-name").value.trim();
+  if(!song) return;
+  lists[currentList].push(song);
+  document.getElementById("new-song-name").value = "";
+  updateSongListUI();
+}
+
+function deleteSong(index) {
+  lists[currentList].splice(index,1);
+  updateSongListUI();
+}
+
+function updateSongListUI() {
+  const container = document.getElementById("song-list");
+  container.innerHTML = "";
+  lists[currentList].forEach((song,i)=>{
+    const div = document.createElement("div");
+    div.textContent = song + " ";
+    const del = document.createElement("button");
+    del.textContent = "削除";
+    del.onclick = ()=>deleteSong(i);
+    div.appendChild(del);
+    container.appendChild(div);
+  });
+}
+
+function createRoulette() {
+  const select = document.getElementById("roulette-list-select");
+  const name = select.value;
+  if(!name) return alert("リストを選択してください");
+  rouletteSongs = lists[name].filter(s => !usedSongs[name].includes(s));
+  document.getElementById("roulette-result").textContent = "";
+  if(rouletteSongs.length === 0) alert("このリストはすべて選ばれています");
+}
+
+function spinRoulette() {
+  if(rouletteSongs.length === 0) return alert("まずルーレットを作成してください");
+  const idx = Math.floor(Math.random() * rouletteSongs.length);
+  const selected = rouletteSongs[idx];
+  document.getElementById("roulette-result").textContent = selected;
+
+  // 選択済みに追加
+  const listName = document.getElementById("roulette-list-select").value;
+  usedSongs[listName].push(selected);
+
+  // ルーレットから削除
+  rouletteSongs.splice(idx,1);
+
+  // ミニパネルに追加
+  const ul = document.getElementById("mini-songs");
+  const li = document.createElement("li");
+  li.textContent = selected;
+  ul.appendChild(li);
+}
+
+/* ----------------- ソリティア簡易 ----------------- */
+function shuffleSolitaire() {
+  const suits = ['♠','♥','♦','♣'];
+  const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const deck = [];
+  suits.forEach(s=>ranks.forEach(r=>deck.push(r+s)));
+
+  // シャッフル
+  for(let i=deck.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [deck[i],deck[j]]=[deck[j],deck[i]];
+  }
+
+  // 表示
+  const board = document.getElementById("solitaire-board");
+  board.innerHTML = "";
+  deck.forEach(c=>{
+    const div = document.createElement("div");
+    div.textContent = c;
+    div.style.display="inline-block";
+    div.style.width="40px";
+    div.style.height="60px";
+    div.style.lineHeight="60px";
+    div.style.textAlign="center";
+    div.style.border="1px solid #000";
+    div.style.margin="2px";
+    div.style.background="#fff";
+    board.appendChild(div);
+  });
+}
+</script>
+
+</body>
+</html>
