@@ -30,6 +30,8 @@
   const MOVE_ACC = 0.9;
   const MAX_SPEED = 6.0;
   const FRICTION = 0.80;
+  const AIR_CONTROL = 1.7;   // ← ジャンプ中の横移動倍率
+
 
   // ====== タイルマップ（編集しやすい） ======
   // . 空
@@ -373,9 +375,12 @@
       player.y -= (baseH - crouchH);
     }
 
-    // 左右移動
-    if (input.left) player.vx -= MOVE_ACC;
-    if (input.right) player.vx += MOVE_ACC;
+    // 左右移動// 左右移動
+    
+    const acc = player.onGround ? MOVE_ACC : MOVE_ACC * AIR_CONTROL;
+    if (input.left)  player.vx -= acc;
+    if (input.right) player.vx += acc;
+
     if (!input.left && !input.right) player.vx *= FRICTION;
 
     player.vx = clamp(player.vx, -MAX_SPEED, MAX_SPEED);
