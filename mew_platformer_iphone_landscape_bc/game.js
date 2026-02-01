@@ -394,13 +394,14 @@
     if (player.vx < -0.2) player.facing = -1;
 
     // ★2段ジャンプ（回数制）
-    if (input.jump && player.jumpsLeft > 0 && !player.crouch) {
+    if (input.jumpPressed && player.jumpsLeft > 0 && !player.crouch) {
       const isFirstJump = (player.jumpsLeft === player.jumpsMax);
       const power = isFirstJump ? JUMP_POWER : (JUMP_POWER * DOUBLE_JUMP_RATIO);
       player.vy = -power;
       player.jumpsLeft--;
       player.onGround = false;
     }
+
 
     // 重力
     player.vy += GRAVITY;
