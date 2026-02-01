@@ -2,32 +2,34 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>ミウ Platformer</title>
+  <meta name="viewport"
+        content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <title>Mew Platformer</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- 操作説明（上部固定） -->
+  <div id="ui-help">
+    ← / →：移動　｜　ジャンプ：右下 / ↑ / Space　｜　しゃがむ：下ボタン / ↓
+    <br />
+    敵は上から踏むと倒せる　｜　落下 or トゲでゲームオーバー　｜　旗でゴール
+  </div>
+
   <div id="wrap">
     <canvas id="game" width="960" height="540"></canvas>
 
-    <div id="hud">
-      <div class="hudItem">COIN: <span id="coin">0</span></div>
-      <div class="hudItem">SCORE: <span id="score">0</span></div>
-      <div class="hudItem">R: リトライ</div>
-    </div>
-
-    <div id="touch" aria-hidden="true">
-      <div class="left">
-        <button class="btn" data-key="ArrowLeft">←</button>
-        <button class="btn" data-key="ArrowRight">→</button>
+    <!-- スマホ用ボタン（下部固定） -->
+    <div id="touch">
+      <div class="pad left">
+        <button id="btnLeft" class="btn">←</button>
+        <button id="btnRight" class="btn">→</button>
       </div>
-      <div class="right">
-        <button class="btn" data-key="Space">ジャンプ</button>
-        <button class="btn" data-key="ArrowDown">しゃがむ</button>
+
+      <div class="pad right">
+        <button id="btnDown" class="btn">↓</button>
+        <button id="btnJump" class="btn primary">⤒</button>
       </div>
     </div>
-
-    <div id="msg"></div>
   </div>
 
   <script src="game.js"></script>
