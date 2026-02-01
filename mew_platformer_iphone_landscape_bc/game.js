@@ -183,7 +183,10 @@
     if (e.code === "ArrowUp" || e.code === "Space") input.jump = v;
     if (e.code === "KeyR" && v) reset();
   };
-  window.addEventListener("keydown", (e)=>key(e,true));
+  window.addEventListener("keydown", (e) => {
+    if (e.repeat) return;   // ★PCのキーリピートを無視
+    key(e, true);
+  });
   window.addEventListener("keyup", (e)=>key(e,false));
 
   // タッチボタン
