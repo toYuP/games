@@ -168,7 +168,14 @@
   findGoalFromMap();
 
   // ====== 入力 ======
-  const input = { left:false, right:false, jump:false, down:false };
+  const input = {
+  left:false,
+  right:false,
+  jump:false,
+  down:false,
+  jumpPressed:false   // ★追加：このフレームで押されたか
+};
+
   const key = (e, v) => {
     if (e.code === "ArrowLeft") input.left = v;
     if (e.code === "ArrowRight") input.right = v;
@@ -360,6 +367,10 @@
   requestAnimationFrame(tick);
 
   function update(dt) {
+    // ジャンプの押下エッジ検出
+　　input.jumpPressed = input.jump && !input._prevJump;
+    input._prevJump = input.jump;
+
     // しゃがみ
     player.crouch = input.down && player.onGround;
     const baseH = 44;
