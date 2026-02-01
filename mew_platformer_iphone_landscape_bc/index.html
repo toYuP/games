@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ミウ Platformer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="960" height="540"></canvas>
+
+    <div id="hud">
+      <div class="hudItem">COIN: <span id="coin">0</span></div>
+      <div class="hudItem">SCORE: <span id="score">0</span></div>
+      <div class="hudItem">R: リトライ</div>
+    </div>
+
+    <div id="touch" aria-hidden="true">
+      <div class="left">
+        <button class="btn" data-key="ArrowLeft">←</button>
+        <button class="btn" data-key="ArrowRight">→</button>
+      </div>
+      <div class="right">
+        <button class="btn" data-key="Space">ジャンプ</button>
+        <button class="btn" data-key="ArrowDown">しゃがむ</button>
+      </div>
+    </div>
+
+    <div id="msg"></div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
