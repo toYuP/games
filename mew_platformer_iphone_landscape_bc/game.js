@@ -2,8 +2,8 @@
   // =========================
   // バージョン（ここだけ変えればOK）
   // =========================
-  const GAME_VERSION = "v0.6.0";
-  // v0.6.0 : 左向き初期 / ジャンプ高さ調整 / 空中横移動1.7倍 / 操作説明表示 / iPhone横向きUI
+  const GAME_VERSION = "v0.7.0";
+  // v0.7.0 : 2段ジャンプ対応 / 空中横移動1.7倍 / 左向き初期 / 版表示 / iPhone横向きUI
 
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
@@ -31,8 +31,9 @@
   img.src = SPRITE.url;
 
   // ====== 物理調整 ======
-  const GRAVITY = 1.2;      // 重めでキビキビ
-  const JUMP_POWER = 12;    // 1回ジャンプで届く高さ（まだ高ければ 11）
+  const GRAVITY = 1.2;
+  const JUMP_POWER = 12;     // 1段目の高さ（高いなら 11）
+  const DOUBLE_JUMP_RATIO = 0.85; // 2段目は少し弱め（好みで 0.75〜1.0）
   const MOVE_ACC = 0.9;
   const MAX_SPEED = 6.0;
   const FRICTION = 0.80;
@@ -45,6 +46,7 @@
   // # 地面（固い）
   // = 足場（固い）
   // ? コインブロック（下から叩くと1回コイン）
+  // B 使用済みブロック（固い）
   // ^ トゲ
   // E 敵の出現位置（読み込み後消える）
   // F ゴール旗
@@ -114,9 +116,13 @@
     vy: 0,
     onGround: false,
     crouch: false,
-    facing: -1, // ★初期 左向き
+    facing: -1,     // 初期 左向き
     animT: 0,
-    animFrame: 0
+    animFrame: 0,
+
+    // ★2段ジャンプ用
+    jumpsMax: 2,
+    jumpsLeft: 2
   };
 
   // ====== スコア ======
@@ -207,6 +213,7 @@
     player.onGround = false;
     player.crouch = false;
     player.facing = -1;
+    player.jumpsLeft = player.jumpsMax;
   }
 
   // ====== 衝突（タイル） ======
@@ -243,20 +250,25 @@
     for (let ty = top; ty <= bottom; ty++) {
       for (let tx = left; tx <= right; tx++) {
         const ch = getTile(tx, ty);
-        if (!isSolid(ch) && ch !== "?") continue; // ? は特別扱い（使用前も固い）
+        if (!isSolid(ch) && ch !== "?") continue;
         const r = tileRect(tx, ty);
         if (aabb(entity, r)) {
           if (entity.vy > 0) {
             entity.y = r.y - entity.h;
             entity.vy = 0;
             entity.onGround = true;
+
+            // ★着地でジャンプ回数リセット
+            if (entity === player) {
+              player.jumpsLeft = player.jumpsMax;
+            }
           } else if (entity.vy < 0) {
             entity.y = r.y + r.h;
             entity.vy = 0;
 
             // ? を下から叩くとコイン（1回）
             if (entity === player && ch === "?") {
-              setTile(tx, ty, "B"); // 使用済みブロック
+              setTile(tx, ty, "B");
               coins += 1;
               score += 100;
             }
@@ -285,7 +297,7 @@
 
     const dir = e.vx >= 0 ? 1 : -1;
 
-    // 穴回避：進行方向の足元（少し先）が空なら反転
+    // 穴回避
     const footX = e.x + (dir === 1 ? e.w + 2 : -2);
     const footY = e.y + e.h + 2;
     const txAhead = Math.floor(footX / TILE);
@@ -294,7 +306,7 @@
       e.vx *= -1;
     }
 
-    // 小段差：前方が壁で、上が空なら少し持ち上げる。無理なら反転
+    // 小段差
     const headY = e.y + e.h - 12;
     const txWall = Math.floor((e.x + (dir === 1 ? e.w + 2 : -2)) / TILE);
     const tyHead = Math.floor(headY / TILE);
@@ -358,7 +370,7 @@
       player.y -= (baseH - crouchH);
     }
 
-    // 左右移動（★空中は横移動を1.7倍）
+    // 左右移動（空中は横移動を1.7倍）
     const acc = player.onGround ? MOVE_ACC : MOVE_ACC * AIR_CONTROL;
     if (input.left)  player.vx -= acc;
     if (input.right) player.vx += acc;
@@ -370,9 +382,12 @@
     if (player.vx > 0.2) player.facing = 1;
     if (player.vx < -0.2) player.facing = -1;
 
-    // ジャンプ（1回）
-    if (input.jump && player.onGround && !player.crouch) {
-      player.vy = -JUMP_POWER;
+    // ★2段ジャンプ（回数制）
+    if (input.jump && player.jumpsLeft > 0 && !player.crouch) {
+      const isFirstJump = (player.jumpsLeft === player.jumpsMax);
+      const power = isFirstJump ? JUMP_POWER : (JUMP_POWER * DOUBLE_JUMP_RATIO);
+      player.vy = -power;
+      player.jumpsLeft--;
       player.onGround = false;
     }
 
@@ -408,6 +423,9 @@
           e.alive = false;
           score += 200;
           player.vy = -8;
+
+          // おまけ：踏んだらジャンプ回数を1回回復（マリオ感）
+          player.jumpsLeft = clamp(player.jumpsLeft + 1, 0, player.jumpsMax);
         } else {
           gameOver = true;
         }
@@ -494,7 +512,7 @@
     ctx.textAlign = "left";
     ctx.fillText(`COIN ${coins}   SCORE ${score}`, 16, 28);
 
-    // ★バージョン表示（右上：一番分かりやすい）
+    // バージョン表示（右上）
     ctx.fillStyle = "rgba(255,255,255,0.65)";
     ctx.font = "12px system-ui, -apple-system";
     ctx.textAlign = "right";
@@ -550,7 +568,7 @@
     ctx.fillStyle = "rgba(255,255,255,0.85)";
     ctx.fillText(sub, canvas.width/2, canvas.height/2 + 45);
 
-    // ★ここにもバージョン（ゲームオーバー/クリア時に確実に見える）
+    // ここにもバージョン
     ctx.font = "12px system-ui, -apple-system";
     ctx.fillStyle = "rgba(255,255,255,0.70)";
     ctx.fillText(GAME_VERSION, canvas.width/2, canvas.height/2 + 80);
